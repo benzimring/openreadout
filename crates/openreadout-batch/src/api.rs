@@ -140,7 +140,7 @@ pub struct BatchToolArgs {
     /// Options of the analysis measures: the arguments of that analysis's MCP tool (e.g.
     /// `{"mz": [195.0877], "ppm": 10}` for openreadout_peaks; assay: `{"analysis": "curve"}`
     /// plus the openreadout_assay arguments), plus `rows` to pick the record list (peaks: peak|compound|chromatogram;
-    /// nmr-peaks: peak|integral|spectrum; ephys-features: sweep|cell|spike; qpcr:
+    /// nmr-peaks: peak|integral|spectrum; nmr-cross-peaks: cross_peak; ephys-features: sweep|cell|spike; qpcr:
     /// record|rq|standard_curve; assay: wells|samples|compounds|kinetics|growth|quality).
     #[serde(default)]
     pub options: serde_json::Map<String, serde_json::Value>,
@@ -168,6 +168,8 @@ pub enum MeasureName {
     Assay,
     /// openreadout_nmr_peaks (its arguments as options)
     NmrPeaks,
+    /// openreadout_nmr_cross_peaks (its arguments as options)
+    NmrCrossPeaks,
     /// openreadout_ephys_features (its arguments as options)
     EphysFeatures,
     /// openreadout_spikes (its arguments as options)

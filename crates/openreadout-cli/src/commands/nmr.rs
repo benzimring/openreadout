@@ -1,11 +1,13 @@
-//! `analyze nmr-peaks`, and `--process` for `trace`, `export` and `preview` (NMR FIDs as spectra).
+//! `analyze nmr-peaks`, `analyze nmr-cross-peaks`, and `--process` for `trace`, `export` and
+//! `preview` (NMR FIDs as spectra).
 
 use std::path::PathBuf;
 
 use openreadout_core::{Dataset, Error, Registry, Result};
+use openreadout_signal::api::CrossPeakQuery;
 use openreadout_signal::nmr::{
-    Apodization, BaselineMode, NmrReport, NmrRequest, PeakOptions, PhaseMode, ProcessOptions,
-    ProcessedNmrDataset, SpectrumSource,
+    Apodization, BaselineMode, CrossPeakReport, NmrReport, NmrRequest, PeakOptions, PhaseMode,
+    ProcessOptions, ProcessedNmrDataset, SpectrumSource,
 };
 
 use crate::output::{emit, fail};
@@ -370,6 +372,158 @@ fn render(r: &NmrReport) -> String {
 pub fn run_nmr_peaks(reg: &Registry, a: &NmrPeaksArgs) -> i32 {
     match nmr_peaks(reg, a) {
         Ok(r) => emit(a.json, &r, render),
+        Err(e) => fail(a.json, &e),
+    }
+}
+
+/// `nmr-cross-peaks`.
+#[derive(Debug, Clone, clap::Args)]
+pub struct NmrCrossPeaksArgs {
+    /// A stored 2D NMR spectrum: a Bruker experiment directory (or its `pdata/<n>`) with a
+    /// processed `2rr`, or a JCAMP-DX nD NMR spectrum.
+    pub file: PathBuf,
+    /// Trace index (see `info`); default: the first stored 2D spectrum.
+    #[arg(long)]
+    pub trace: Option<u32>,
+    /// Report this experiment kind instead of the one the pulse program name gives: `hsqc`,
+    /// `hmqc`, `hmbc`, `cosy`, `tocsy`, `noesy`, `roesy`, `heteronuclear`, `homonuclear`.
+    #[arg(long, value_name = "KIND")]
+    pub experiment: Option<String>,
+    /// Minimum S/N: height above the baseline over the noise of the cross peak's F1 column.
+    #[arg(long, value_name = "X", default_value_t = 10.0)]
+    pub min_snr: f64,
+    /// Minimum prominence (height above the saddle to a higher peak) in noise SDs.
+    #[arg(long, value_name = "X", default_value_t = 5.0)]
+    pub min_prominence: f64,
+    /// Minimum height as a fraction of the tallest point (e.g. 0.01 = 1 %).
+    #[arg(long, value_name = "F", default_value_t = 0.0)]
+    pub min_height_fraction: f64,
+    /// Search positive cross peaks only (default: both signs, as an edited HSQC needs).
+    #[arg(long)]
+    pub positive_only: bool,
+    /// Only pick between two F2 (direct dimension) shifts, `A:B` in ppm.
+    #[arg(long, value_name = "A:B", allow_hyphen_values = true)]
+    pub f2_range_ppm: Option<String>,
+    /// Only pick between two F1 (indirect dimension) shifts, `A:B` in ppm.
+    #[arg(long, value_name = "A:B", allow_hyphen_values = true)]
+    pub f1_range_ppm: Option<String>,
+    /// Peaks of either sign closer than this in both dimensions are one cross peak (the
+    /// components of a multiplet), Hz; 0 lists every peak.
+    #[arg(long, value_name = "HZ", default_value_t = 15.0)]
+    pub merge_hz: f64,
+    /// Leave out peaks at most this fraction of the height of a taller cross peak in its F2
+    /// column (truncation ripples) or, on heteronuclear spectra, its F1 row (decoupling
+    /// sidebands); 0 keeps them.
+    #[arg(long, value_name = "F", default_value_t = 0.2)]
+    pub ripple_fraction: f64,
+    /// Keep at most this many cross peaks (the highest S/N).
+    #[arg(long, value_name = "N", default_value_t = 500)]
+    pub max_cross_peaks: usize,
+    #[arg(long)]
+    pub json: bool,
+}
+
+fn cross_query(a: &NmrCrossPeaksArgs) -> Result<CrossPeakQuery> {
+    for (name, v) in [
+        ("--min-snr", a.min_snr),
+        ("--min-prominence", a.min_prominence),
+        ("--min-height-fraction", a.min_height_fraction),
+        ("--merge-hz", a.merge_hz),
+        ("--ripple-fraction", a.ripple_fraction),
+    ] {
+        if !(v.is_finite() && v >= 0.0) {
+            return Err(Error::Usage(format!("{name} must be a number >= 0")));
+        }
+    }
+    Ok(CrossPeakQuery {
+        trace: a.trace,
+        experiment: a.experiment.clone(),
+        min_snr: Some(a.min_snr),
+        min_prominence: Some(a.min_prominence),
+        min_height_fraction: Some(a.min_height_fraction),
+        positive_only: a.positive_only,
+        f2_range_ppm: a
+            .f2_range_ppm
+            .as_deref()
+            .map(|r| parse_range(r, "--f2-range-ppm"))
+            .transpose()?,
+        f1_range_ppm: a
+            .f1_range_ppm
+            .as_deref()
+            .map(|r| parse_range(r, "--f1-range-ppm"))
+            .transpose()?,
+        merge_hz: Some(a.merge_hz),
+        ripple_fraction: Some(a.ripple_fraction),
+        max_cross_peaks: Some(a.max_cross_peaks),
+    })
+}
+
+/// Run `nmr-cross-peaks` on one file.
+pub fn nmr_cross_peaks(reg: &Registry, a: &NmrCrossPeaksArgs) -> Result<CrossPeakReport> {
+    let req = cross_query(a)?.request()?;
+    let (_, mut ds) = reg.open(&a.file)?;
+    let info = ds.info()?;
+    openreadout_signal::nmr::analyze_cross_peaks(ds.as_mut(), &info, &req)
+}
+
+fn render_cross(r: &CrossPeakReport) -> String {
+    let nuc = |d: &openreadout_signal::nmr::SpectrumDimension| {
+        d.nucleus.clone().unwrap_or_else(|| "?".into())
+    };
+    let mut s = format!(
+        "{} ({}{}), F2 {} {:.3} to {:.3} ppm ({} points), F1 {} {:.3} to {:.3} ppm ({} points); noise SD {:.4e}; {} cross peaks",
+        r.experiment.kind,
+        r.experiment
+            .pulse_program
+            .as_deref()
+            .unwrap_or("no pulse program"),
+        if r.experiment.multiplicity_edited {
+            ", edited"
+        } else {
+            ""
+        },
+        nuc(&r.f2),
+        r.f2.axis.first_ppm,
+        r.f2.axis.last_ppm(),
+        r.f2.axis.size,
+        nuc(&r.f1),
+        r.f1.axis.first_ppm,
+        r.f1.axis.last_ppm(),
+        r.f1.axis.size,
+        r.noise_sd,
+        r.cross_peak_count
+    );
+    s.push_str("\n      F2 ppm      F1 ppm        height      S/N  maxima");
+    for p in r.cross_peaks.iter().take(80) {
+        s.push_str(&format!(
+            "\n  {:>10.4}  {:>10.4}  {:>12.4e}  {:>7.1}  {:>6}{}",
+            p.f2_ppm,
+            p.f1_ppm,
+            p.height,
+            p.snr,
+            p.maxima,
+            if p.on_diagonal == Some(true) {
+                "  diagonal"
+            } else {
+                ""
+            }
+        ));
+    }
+    if r.cross_peaks.len() > 80 {
+        s.push_str(&format!(
+            "\n  … {} more (use --json)",
+            r.cross_peaks.len() - 80
+        ));
+    }
+    for n in &r.notes {
+        s.push_str(&format!("\nnote: {n}"));
+    }
+    s
+}
+
+pub fn run_nmr_cross_peaks(reg: &Registry, a: &NmrCrossPeaksArgs) -> i32 {
+    match nmr_cross_peaks(reg, a) {
+        Ok(r) => emit(a.json, &r, render_cross),
         Err(e) => fail(a.json, &e),
     }
 }

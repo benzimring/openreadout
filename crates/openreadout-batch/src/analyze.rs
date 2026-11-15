@@ -20,6 +20,8 @@ pub enum AnalyzeKind {
     Chromatogram,
     /// NMR peak list (ppm, height, width, S/N) and region integrals, from the processed spectrum or the FID
     NmrPeaks,
+    /// cross peaks of a stored 2D NMR spectrum (HSQC, HMBC, COSY, TOCSY, NOESY, ROESY): F2 and F1 shifts, height and sign, S/N, widths, diagonal and mirror flags, experiment kind
+    NmrCrossPeaks,
     /// patch-clamp: action potentials per sweep, rheobase, f–I slope, input resistance, tau, capacitance, sag; voltage-clamp holding current and access resistance
     EphysFeatures,
     /// extracellular spike detection per channel: counts, rates, times
@@ -39,6 +41,7 @@ impl AnalyzeKind {
             Self::Peaks => "peaks",
             Self::Chromatogram => "chromatogram",
             Self::NmrPeaks => "nmr-peaks",
+            Self::NmrCrossPeaks => "nmr-cross-peaks",
             Self::EphysFeatures => "ephys-features",
             Self::Spikes => "spikes",
             Self::Qpcr => "qpcr",
@@ -48,10 +51,11 @@ impl AnalyzeKind {
     }
 
     /// Every kind, in the order the CLI lists them.
-    pub const ALL: [AnalyzeKind; 8] = [
+    pub const ALL: [AnalyzeKind; 9] = [
         Self::Peaks,
         Self::Chromatogram,
         Self::NmrPeaks,
+        Self::NmrCrossPeaks,
         Self::EphysFeatures,
         Self::Spikes,
         Self::Qpcr,
@@ -136,6 +140,8 @@ enum AnalyzeOptions {
     Chromatogram(openreadout_quant::api::ChromatogramQuery),
     /// kind=nmr-peaks.
     NmrPeaks(openreadout_signal::api::NmrQuery),
+    /// kind=nmr-cross-peaks.
+    NmrCrossPeaks(openreadout_signal::api::CrossPeakQuery),
     /// kind=ephys-features.
     EphysFeatures(openreadout_signal::api::EphysQuery),
     /// kind=spikes.
@@ -176,6 +182,8 @@ pub enum AnalyzeOutput {
     Chromatogram(openreadout_quant::extract::ChromatogramOutput),
     /// kind=nmr-peaks.
     NmrPeaks(openreadout_signal::nmr::NmrReport),
+    /// kind=nmr-cross-peaks.
+    NmrCrossPeaks(openreadout_signal::nmr::CrossPeakReport),
     /// kind=ephys-features.
     EphysFeatures(openreadout_signal::ephys::CellReport),
     /// kind=spikes.
@@ -302,6 +310,14 @@ pub fn run_dataset(
         AnalyzeKind::NmrPeaks => {
             let q: openreadout_signal::api::NmrQuery = parse(kind, o)?;
             AnalyzeOutput::NmrPeaks(openreadout_signal::nmr::analyze(ds, info, &q.request()?)?)
+        }
+        AnalyzeKind::NmrCrossPeaks => {
+            let q: openreadout_signal::api::CrossPeakQuery = parse(kind, o)?;
+            AnalyzeOutput::NmrCrossPeaks(openreadout_signal::nmr::analyze_cross_peaks(
+                ds,
+                info,
+                &q.request()?,
+            )?)
         }
         AnalyzeKind::EphysFeatures => {
             let q: openreadout_signal::api::EphysQuery = parse(kind, o)?;

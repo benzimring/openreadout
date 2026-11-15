@@ -129,7 +129,7 @@ def batch(
     sweep × channel), ``"table"`` (FCS: per parameter; plate reads: per well), ``"gate"``
     (per population; pass ``workspace=`` or ``gatingml=``, ``medians=["Comp-FITC-A"]``) or
     ``"info"`` (header metadata), ``"scans"`` (per MS scan), or an analysis — ``"peaks"``,
-    ``"chromatogram"``, ``"assay"``, ``"nmr-peaks"``, ``"ephys-features"``, ``"spikes"``,
+    ``"chromatogram"``, ``"assay"``, ``"nmr-peaks"``, ``"nmr-cross-peaks"``, ``"ephys-features"``, ``"spikes"``,
     ``"qpcr"`` — configured with ``options={...}``: the arguments of that analysis's MCP
     tool (``openreadout_peaks``, ...; e.g. ``batch("peaks", "runs/",
     options={"mz": [195.0877], "rows": "chromatogram"})``). Per-well plate statistics are

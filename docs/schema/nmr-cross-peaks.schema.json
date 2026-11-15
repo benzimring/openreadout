@@ -1,0 +1,344 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CrossPeakReport",
+  "description": "Output of `analyze nmr-cross-peaks`.",
+  "type": "object",
+  "properties": {
+    "path": {
+      "description": "The input path.",
+      "type": "string"
+    },
+    "format": {
+      "description": "Format id.",
+      "type": "string"
+    },
+    "trace": {
+      "description": "Trace used (see `info` → `traces[]`).",
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    },
+    "trace_name": {
+      "description": "Its name.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "experiment": {
+      "description": "The kind of experiment.",
+      "$ref": "#/$defs/ExperimentInfo"
+    },
+    "f2": {
+      "description": "Direct dimension.",
+      "$ref": "#/$defs/SpectrumDimension"
+    },
+    "f1": {
+      "description": "Indirect dimension.",
+      "$ref": "#/$defs/SpectrumDimension"
+    },
+    "baseline": {
+      "description": "Median level of the spectrum (heights are measured from it).",
+      "type": "number",
+      "format": "double"
+    },
+    "noise_sd": {
+      "description": "Robust noise standard deviation (units of `height`).",
+      "type": "number",
+      "format": "double"
+    },
+    "options": {
+      "description": "Thresholds used.",
+      "$ref": "#/$defs/CrossPeakOptions"
+    },
+    "cross_peak_count": {
+      "description": "Number of cross peaks found (before `max_cross_peaks`).",
+      "type": "integer",
+      "format": "uint",
+      "minimum": 0
+    },
+    "cross_peaks": {
+      "description": "Cross peaks, high F2 shift first, then high F1 shift.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/CrossPeak"
+      }
+    },
+    "notes": {
+      "description": "Remarks.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "path",
+    "format",
+    "trace",
+    "experiment",
+    "f2",
+    "f1",
+    "baseline",
+    "noise_sd",
+    "options",
+    "cross_peak_count",
+    "cross_peaks"
+  ],
+  "$defs": {
+    "ExperimentInfo": {
+      "description": "What kind of 2D experiment the spectrum is.",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "description": "`hsqc`, `hmqc`, `hmbc`, `cosy`, `tocsy`, `noesy`, `roesy`, or, when the pulse program\ndoes not say, `heteronuclear`, `homonuclear` or `unknown`.",
+          "type": "string"
+        },
+        "multiplicity_edited": {
+          "description": "A multiplicity-edited HSQC (pulse program name `hsqced…`): one multiplicity group has\nnegative heights.",
+          "type": "boolean"
+        },
+        "pulse_program": {
+          "description": "The pulse program name stored in the file.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "kind_source": {
+          "description": "Where `kind` came from: `pulse_program`, `nuclei` or `request`.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "multiplicity_edited",
+        "kind_source"
+      ]
+    },
+    "SpectrumDimension": {
+      "description": "One dimension of a 2D spectrum.",
+      "type": "object",
+      "properties": {
+        "nucleus": {
+          "description": "Nucleus (`1H`, `13C`), when the file names it.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "axis": {
+          "description": "Chemical-shift axis: point `k` at `first_ppm + k · step_ppm`.",
+          "$ref": "#/$defs/PpmAxis"
+        }
+      },
+      "required": [
+        "axis"
+      ]
+    },
+    "PpmAxis": {
+      "description": "A regular chemical-shift axis: point `k` is at `first_ppm + k · step_ppm`.",
+      "type": "object",
+      "properties": {
+        "first_ppm": {
+          "description": "Chemical shift of point 0 (the left, high-frequency edge), ppm.",
+          "type": "number",
+          "format": "double"
+        },
+        "step_ppm": {
+          "description": "Increment per point, ppm (negative: shifts decrease left to right).",
+          "type": "number",
+          "format": "double"
+        },
+        "size": {
+          "description": "Number of points.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "reference_frequency_mhz": {
+          "description": "Frequency of 0 ppm, MHz (converts ppm to Hz).",
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "required": [
+        "first_ppm",
+        "step_ppm",
+        "size",
+        "reference_frequency_mhz"
+      ]
+    },
+    "CrossPeakOptions": {
+      "description": "Thresholds and limits of cross-peak picking.",
+      "type": "object",
+      "properties": {
+        "min_snr": {
+          "description": "Minimum S/N: height above the baseline over the noise of the peak's F1 column.",
+          "type": "number",
+          "format": "double"
+        },
+        "min_prominence_snr": {
+          "description": "Minimum prominence (height above the saddle to a higher peak), in noise SDs.",
+          "type": "number",
+          "format": "double"
+        },
+        "min_height_fraction": {
+          "description": "Minimum height as a fraction of the tallest point of the searched region.",
+          "type": "number",
+          "format": "double"
+        },
+        "positive_only": {
+          "description": "Search positive signal only (negative cross peaks are searched by default).",
+          "type": "boolean"
+        },
+        "f2_range_ppm": {
+          "description": "Only pick between two F2 shifts, ppm.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "prefixItems": [
+            {
+              "type": "number",
+              "format": "double"
+            },
+            {
+              "type": "number",
+              "format": "double"
+            }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "f1_range_ppm": {
+          "description": "Only pick between two F1 shifts, ppm.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "prefixItems": [
+            {
+              "type": "number",
+              "format": "double"
+            },
+            {
+              "type": "number",
+              "format": "double"
+            }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "merge_hz": {
+          "description": "Peaks closer than this in both dimensions are one cross peak, Hz.",
+          "type": "number",
+          "format": "double"
+        },
+        "ripple_fraction": {
+          "description": "Leave out peaks at most this fraction of the height of a taller cross peak in its F2\ncolumn (truncation ripples) or F1 row (decoupling sidebands); 0 keeps them.",
+          "type": "number",
+          "format": "double"
+        },
+        "max_cross_peaks": {
+          "description": "Keep at most this many cross peaks (the highest S/N).",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "min_snr",
+        "min_prominence_snr",
+        "min_height_fraction",
+        "positive_only",
+        "merge_hz",
+        "ripple_fraction",
+        "max_cross_peaks"
+      ]
+    },
+    "CrossPeak": {
+      "description": "One cross peak.",
+      "type": "object",
+      "properties": {
+        "f2_ppm": {
+          "description": "Shift in the direct dimension, ppm.",
+          "type": "number",
+          "format": "double"
+        },
+        "f1_ppm": {
+          "description": "Shift in the indirect dimension, ppm.",
+          "type": "number",
+          "format": "double"
+        },
+        "height": {
+          "description": "Stored value at the interpolated maximum (negative for a negative cross peak).",
+          "type": "number",
+          "format": "double"
+        },
+        "snr": {
+          "description": "|height − baseline| over the noise of its F1 column (without its own rows; at least the\nspectrum's noise SD).",
+          "type": "number",
+          "format": "double"
+        },
+        "f2_width_hz": {
+          "description": "Width at half height along F2, Hz (none when it cannot be measured).",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "f1_width_hz": {
+          "description": "Width at half height along F1, Hz.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "f2_index": {
+          "description": "F2 point of the maximum.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "f1_index": {
+          "description": "F1 point (sweep) of the maximum.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "maxima": {
+          "description": "Peaks merged into this cross peak (multiplet components).",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "on_diagonal": {
+          "description": "Homonuclear spectra: the cross peak lies on the diagonal F1 = F2.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "mirror_partner": {
+          "description": "Homonuclear spectra, off the diagonal: another cross peak lies at the mirror position\n(F1 and F2 swapped). Real correlations usually have one; t1 noise rarely does.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "f2_ppm",
+        "f1_ppm",
+        "height",
+        "snr",
+        "f2_index",
+        "f1_index",
+        "maxima"
+      ]
+    }
+  }
+}

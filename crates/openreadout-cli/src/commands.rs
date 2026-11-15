@@ -57,6 +57,7 @@ pub fn run(cmd: Command) -> i32 {
             AnalyzeKind::Peaks(a) => peaks::run(&reg, &a),
             AnalyzeKind::Chromatogram(a) => chromatogram::run(&reg, &a),
             AnalyzeKind::NmrPeaks(a) => nmr::run_nmr_peaks(&reg, &a),
+            AnalyzeKind::NmrCrossPeaks(a) => nmr::run_nmr_cross_peaks(&reg, &a),
             AnalyzeKind::EphysFeatures(a) => ephys::run_ephys_features(&reg, &a),
             AnalyzeKind::Spikes(a) => ephys::run_spikes(&reg, &a),
             AnalyzeKind::Qpcr(a) => qpcr::run(&reg, &a),

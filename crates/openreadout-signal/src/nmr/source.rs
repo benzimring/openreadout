@@ -174,7 +174,7 @@ fn trace(info: &FileInfo, index: u32) -> Result<&TraceInfo> {
         .ok_or_else(|| Error::Usage(format!("trace {index} out of range")))
 }
 
-fn num(v: Option<&Value>) -> Option<f64> {
+pub(super) fn num(v: Option<&Value>) -> Option<f64> {
     match v? {
         Value::Number(n) => n.as_f64(),
         Value::String(s) => s.trim().parse().ok(),

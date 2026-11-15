@@ -2,8 +2,8 @@
 # R-shaped results (chromatogram, peaks, qpcr) are in chrom.R and export.R; the others pass
 # their options through as JSON.
 
-.analyze_kinds <- c("peaks", "chromatogram", "nmr-peaks", "ephys-features", "spikes", "qpcr",
-                    "assay", "gate")
+.analyze_kinds <- c("peaks", "chromatogram", "nmr-peaks", "nmr-cross-peaks", "ephys-features",
+                    "spikes", "qpcr", "assay", "gate")
 
 # Options that hold one index (1-based in R, 0-based for the native side) or a list of them.
 .index_options <- c("trace", "sweep", "channel", "table")
@@ -104,8 +104,8 @@
 #'
 #' @param x A path or an [openreadout_open()] file (`"qpcr"`, `"assay"` and `"gate"` read the
 #'   file by its path).
-#' @param kind The analysis: `"peaks"`, `"chromatogram"`, `"nmr-peaks"`, `"ephys-features"`,
-#'   `"spikes"`, `"qpcr"`, `"assay"` or `"gate"`.
+#' @param kind The analysis: `"peaks"`, `"chromatogram"`, `"nmr-peaks"`, `"nmr-cross-peaks"`,
+#'   `"ephys-features"`, `"spikes"`, `"qpcr"`, `"assay"` or `"gate"`.
 #' @param ... The options of `kind` (see the sections).
 #' @return Depends on `kind` (see the sections).
 #' @examples

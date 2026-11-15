@@ -17,7 +17,7 @@ The command pages list each flag. Flags that only make sense in a terminal or a 
 
 ## Tools
 
-The server has 28 tools.
+The server has 29 tools.
 
 | tool | what it does | command |
 | --- | --- | --- |
@@ -35,6 +35,7 @@ The server has 28 tools.
 | `openreadout_peaks` | chromatographic peaks; bands and regions of spectra | [analyze peaks](commands/analyze.md#peaks-and-chromatogram) |
 | `openreadout_chromatogram` | TIC, BPC, XIC, SRM and detector chromatograms | [analyze chromatogram](commands/analyze.md#peaks-and-chromatogram) |
 | `openreadout_nmr_peaks` | NMR peaks and integrals | [analyze nmr-peaks](commands/analyze.md#nmr-peaks) |
+| `openreadout_nmr_cross_peaks` | cross peaks of a stored 2-D NMR spectrum | [analyze nmr-cross-peaks](commands/analyze.md#nmr-cross-peaks) |
 | `openreadout_ephys_features` | patch-clamp features | [analyze ephys-features](commands/analyze.md#ephys-features) |
 | `openreadout_spikes` | extracellular spikes | [analyze spikes](commands/analyze.md#spikes) |
 | `openreadout_qpcr` | qPCR Cq, Tm, ΔΔCq and standard curves | [analyze qpcr](commands/analyze.md#qpcr) |
@@ -115,6 +116,7 @@ Each `analyze` subcommand is a tool whose arguments are its flags. An argument t
 - `openreadout_peaks`: chromatographic peaks with areas, widths, tailing, plates, resolution and S/N; compound lists; bands and regions of IR, Raman, UV-Vis and NMR spectra. Arguments: those of `openreadout_chromatogram` to choose the signal, plus `smooth`, `min_snr`, `min_height`, `min_width`, `baseline`, `area_seconds`, `rt`, `window`, `pick`, `integrate`, `x_range`, `compounds` and `summary_only`. See [Chromatograms and peaks](../guides/quantitation.md).
 - `openreadout_chromatogram`: TIC, BPC, XIC and SRM chromatograms, or stored detector traces. Arguments: `tic`, `bpc`, `mz`, `ppm`, `da`, `transitions`, `transition_tol`, `traces`, `channel`, `sweep`, `run`, `ms_level`, `polarity`, `scan_filter`, `precursor`, `precursor_tol`, `rt_range`, `mz_range`, `profile`, `aggregate` and `max_points`.
 - `openreadout_nmr_peaks`: NMR peak list and region integrals. Arguments: `from`, `trace`, `sweep`, `phase`, `lb`, `size`, `baseline`, `min_snr`, `min_prominence`, `min_height_fraction`, `negative`, `range_ppm`, `max_peaks`, `integrate`, `auto_integrate` (one region per multiplet) and `integral_reference`. See [NMR processing](../guides/nmr.md).
+- `openreadout_nmr_cross_peaks`: cross peaks of a stored 2-D NMR spectrum (HSQC, HMBC, COSY, TOCSY, NOESY, ROESY), with the experiment kind from the pulse program. Arguments: `trace`, `experiment`, `min_snr`, `min_prominence`, `min_height_fraction`, `positive_only`, `f2_range_ppm`, `f1_range_ppm`, `merge_hz`, `ripple_fraction` and `max_cross_peaks`. See [NMR processing](../guides/nmr.md).
 - `openreadout_ephys_features`: patch-clamp features per sweep and per cell. Arguments: `trace`, `channel`, `sweeps`, `peak_threshold_mv`, `dvdt_threshold` and `max_spikes`. See [Electrophysiology](../guides/ephys.md).
 - `openreadout_spikes`: extracellular spike detection per channel. Arguments: `trace`, `channels`, `sweeps`, `band_hz`, `threshold`, `sign`, `max_seconds` and `max_times`.
 - `openreadout_qpcr`: Cq and Tm per well and target, ΔΔCq and standard curves. Arguments: `well`, `target`, `sample`, `run`, `compute_cq`, `cq_method`, `threshold`, `baseline_start`, `baseline_end`, `ddcq`, `reference_targets`, `control_sample`, `standard_curve`, `undetermined_cq`, `max_records` and `fields` (see [Per-well rows](#per-well-rows)).
@@ -155,7 +157,7 @@ Writes one embedded attachment, such as a slide label or thumbnail, to a new fil
 
 ### openreadout_batch
 
-Runs one `measure` over many files and returns one tidy table: `stats`, `trace`, `table`, `info`, `scans`, `gate`, or any analysis (`peaks`, `chromatogram`, `nmr-peaks`, `ephys-features`, `spikes`, `qpcr`, or `assay` with `analysis`). Inputs come from `paths` (files, directories or globs, with `recursive`) or from an index (`from_index` and `query`); `formats` limits the formats. `options` holds the measure's settings: for an analysis, the arguments of its tool.
+Runs one `measure` over many files and returns one tidy table: `stats`, `trace`, `table`, `info`, `scans`, `gate`, or any analysis (`peaks`, `chromatogram`, `nmr-peaks`, `nmr-cross-peaks`, `ephys-features`, `spikes`, `qpcr`, or `assay` with `analysis`). Inputs come from `paths` (files, directories or globs, with `recursive`) or from an index (`from_index` and `query`); `formats` limits the formats. `options` holds the measure's settings: for an analysis, the arguments of its tool.
 
 `sample_sheets`, `worksheet`, `keys`, `where`, `fields`, `by`, `values`, `replicate`, `exact_by`, `test` and `control` work as the flags of [`batch`](commands/batch.md). `limit` (default 20, at most 500) and `offset` page the rows; `output` writes the whole table to a file. A file that fails becomes a row with an `error`. See [Many files](../guides/batch.md).
 
@@ -203,7 +205,7 @@ In clients that support [MCP Apps](https://modelcontextprotocol.io/extensions/ap
 
 The viewer is one HTML page served as the resource `ui://openreadout/viewer.html`. It runs in the client's sandbox, loads nothing from the network and asks the server for data with the tool `openreadout_view`. That tool is only for the viewer: clients that support MCP Apps hide it from the assistant. Its results are kept small. Pictures are at most 1600 px on their longest side and 750 kB. Plots have at most 4000 points per series, and longer signals are drawn as the minimum and maximum of each slice, so single-sample spikes stay visible. Flow-cytometry plots sample at most 50,000 events; with gating, every event of a file of up to 2 million is gated before sampling (larger files in windows spread over the run). Each result says what was reduced. The viewer draws data in the colours of OpenReadout's pictures, and colours plate groups, populations and series by the same rule as previews and plots, so a plate looks the same in all three.
 
-The server offers the viewer only to clients that declare the extension `io.modelcontextprotocol/ui` when they connect. Other clients see the 28 tools exactly as before. Set `OPENREADOUT_MCP_APPS=off` to turn the viewer off, or `on` to offer it to a client that supports MCP Apps without declaring it.
+The server offers the viewer only to clients that declare the extension `io.modelcontextprotocol/ui` when they connect. Other clients see the 29 tools exactly as before. Set `OPENREADOUT_MCP_APPS=off` to turn the viewer off, or `on` to offer it to a client that supports MCP Apps without declaring it.
 
 ### Following the assistant
 

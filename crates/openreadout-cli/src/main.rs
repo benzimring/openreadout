@@ -161,9 +161,9 @@ enum Command {
     /// group summaries (`--by`).
     ///
     /// Measures: stats, trace, table, info, scans (one row per MS scan header), or an analysis
-    /// — peaks, chromatogram, assay, nmr-peaks, ephys-features, spikes, qpcr, gate — configured
-    /// with the MCP tools' argument names (`--set mz=[195.0877] --set ppm=10`). Rows are exactly the
-    /// single-file command's records (one per peak, compound, well, sweep, …).
+    /// — peaks, chromatogram, assay, nmr-peaks, nmr-cross-peaks, ephys-features, spikes, qpcr,
+    /// gate — configured with the MCP tools' argument names (`--set mz=[195.0877] --set ppm=10`).
+    /// Rows are exactly the single-file command's records (one per peak, compound, well, sweep, …).
     Batch(commands::measure::MeasureArgs),
     /// Group statistics of a saved table (from `batch -o` or `--tidy -o`) by its columns, with
     /// replicate averaging and tests against a control.
@@ -215,6 +215,10 @@ pub(crate) enum AnalyzeKind {
     /// NMR peak list and integrals, on the vendor's processed spectrum or a spectrum processed
     /// from the FID; `--integrate A:B` regions.
     NmrPeaks(commands::nmr::NmrPeaksArgs),
+    /// Cross peaks of a stored 2D NMR spectrum (HSQC, HMBC, COSY, TOCSY, NOESY, ROESY): F2
+    /// and F1 shifts, height (negative ones too, for edited HSQC), S/N and widths, with the
+    /// experiment kind from the pulse program.
+    NmrCrossPeaks(commands::nmr::NmrCrossPeaksArgs),
     /// Patch-clamp features: action potentials per sweep, rheobase and f–I curve, passive
     /// properties; voltage clamp: holding current, access/membrane resistance, capacitance.
     EphysFeatures(commands::ephys::EphysArgs),

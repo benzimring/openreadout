@@ -1,6 +1,6 @@
 # analyze
 
-`analyze` runs analyses with documented methods: chromatographic peaks, chromatograms, NMR peaks, patch-clamp features, extracellular spikes, qPCR, flow-cytometry gating and plate-reader assays. Each analysis is a subcommand with its own flags, and an MCP tool with the same name and arguments: `analyze nmr-peaks --range-ppm 0:10` is `openreadout_nmr_peaks` with `range_ppm: [0, 10]`. The six plate-reader analyses share one tool, `openreadout_assay`, with `analysis` naming the subcommand.
+`analyze` runs analyses with documented methods: chromatographic peaks, chromatograms, NMR peaks, 2-D NMR cross peaks, patch-clamp features, extracellular spikes, qPCR, flow-cytometry gating and plate-reader assays. Each analysis is a subcommand with its own flags, and an MCP tool with the same name and arguments: `analyze nmr-peaks --range-ppm 0:10` is `openreadout_nmr_peaks` with `range_ppm: [0, 10]`. The six plate-reader analyses share one tool, `openreadout_assay`, with `analysis` naming the subcommand.
 
 ```text
 openreadout analyze <SUBCOMMAND> [OPTIONS] <FILE>...
@@ -11,6 +11,7 @@ openreadout analyze <SUBCOMMAND> [OPTIONS] <FILE>...
 | `peaks` | `openreadout_peaks` | detected and integrated peaks; bands and regions of spectra | [Quantitation](../../guides/quantitation.md) |
 | `chromatogram` | `openreadout_chromatogram` | TIC, BPC, XIC, SRM/MRM and stored detector traces | [Quantitation](../../guides/quantitation.md) |
 | `nmr-peaks` | `openreadout_nmr_peaks` | NMR peak list and integrals | [NMR](../../guides/nmr.md) |
+| `nmr-cross-peaks` | `openreadout_nmr_cross_peaks` | cross peaks of a stored 2-D NMR spectrum | [NMR](../../guides/nmr.md) |
 | `ephys-features` | `openreadout_ephys_features` | action potentials, rheobase, f–I curve, passive properties | [Electrophysiology](../../guides/ephys.md) |
 | `spikes` | `openreadout_spikes` | extracellular spike counts, rates and times | [Electrophysiology](../../guides/ephys.md) |
 | `qpcr` | `openreadout_qpcr` | Cq, Tm, ΔΔCq, standard curves | [qPCR formats](../../formats/qpcr.md) |
@@ -124,6 +125,32 @@ The `--process-*` flags of `trace`, `export` and `preview` take the same values 
 
 ```bash
 openreadout analyze nmr-peaks sample/1 --integrate 7.5:7.0 --integrate 3.8:3.6
+```
+
+`nmr-peaks` reads 1-D spectra. A stored 2-D spectrum (an HSQC `pdata/1` with `2rr`) is refused with exit 6; use `nmr-cross-peaks`.
+
+## nmr-cross-peaks
+
+```text
+openreadout analyze nmr-cross-peaks [OPTIONS] <FILE>
+```
+
+The input is a 2-D spectrum the vendor software processed and stored: a Bruker experiment directory with `pdata/<n>/2rr`, or a JCAMP-DX nD NMR spectrum. A 2-D FID exits 6. Each cross peak has its F2 and F1 shifts, signed height, S/N and widths. On homonuclear spectra `on_diagonal` and `mirror_partner` mark the diagonal and mirrored cross peaks, and `notes` reports axis corrections. The [NMR guide](../../guides/nmr.md) explains the method.
+
+- `--trace N`: trace index. Default: the first stored 2-D spectrum.
+- `--experiment KIND`: report this kind instead of the one the pulse program gives.
+- `--min-snr X`: minimum S/N against the noise of the cross peak's F1 column. Default 10.
+- `--min-prominence X`: minimum prominence in noise SDs: how far a maximum rises above the saddle to a higher one before it counts as a separate peak. Default 5.
+- `--min-height-fraction F`: minimum height as a fraction of the tallest point. Default 0.
+- `--positive-only`: search positive cross peaks only. By default both signs are searched.
+- `--f2-range-ppm A:B`, `--f1-range-ppm A:B`: only pick in these shift windows.
+- `--merge-hz HZ`: peaks closer than this in both dimensions are one cross peak (the components of a multiplet). Default 15; 0 lists every maximum.
+- `--ripple-fraction F`: leave out peaks at most this fraction of a taller cross peak that are its truncation ripples or decoupling sidebands. Default 0.2; 0 keeps them.
+- `--max-cross-peaks N`: list at most this many, the highest S/N. Default 500; `cross_peak_count` is the number found.
+
+```bash
+openreadout analyze nmr-cross-peaks compound/5 --json
+openreadout analyze nmr-cross-peaks hmbc.jdx --f1-range-ppm 160:100 --min-snr 20
 ```
 
 ## ephys-features

@@ -103,6 +103,8 @@ pub enum SchemaOf {
     Chromatogram,
     /// `analyze nmr-peaks`: peak list, integrals and the processing record of an NMR spectrum.
     NmrPeaks,
+    /// `analyze nmr-cross-peaks`: cross peaks of a stored 2D NMR spectrum.
+    NmrCrossPeaks,
     /// `analyze ephys-features`: per-cell, per-sweep and per-spike patch-clamp features.
     EphysFeatures,
     /// `analyze spikes`: extracellular spike counts, rates and times per channel.
@@ -194,6 +196,7 @@ fn schema(of: SchemaOf) -> String {
         SchemaOf::Peaks => out::<openreadout_quant::analyze::PeaksOutput>(),
         SchemaOf::Chromatogram => out::<openreadout_quant::extract::ChromatogramOutput>(),
         SchemaOf::NmrPeaks => out::<openreadout_signal::nmr::NmrReport>(),
+        SchemaOf::NmrCrossPeaks => out::<openreadout_signal::nmr::CrossPeakReport>(),
         SchemaOf::EphysFeatures => out::<openreadout_signal::ephys::CellReport>(),
         SchemaOf::Spikes => out::<openreadout_signal::ephys::SpikesReport>(),
         SchemaOf::Qpcr => out::<openreadout_qpcr::QpcrReport>(),

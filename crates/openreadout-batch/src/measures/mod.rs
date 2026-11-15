@@ -1,6 +1,6 @@
 //! The built-in measures: `stats`, `trace`, `table`, `gate`, `info` and `scans`, and the
-//! analyses (`peaks`, `chromatogram`, `assay`, `nmr-peaks`, `ephys-features`, `spikes`, `qpcr`;
-//! `stats` per well) through [`AnalysisMeasure`].
+//! analyses (`peaks`, `chromatogram`, `assay`, `nmr-peaks`, `nmr-cross-peaks`, `ephys-features`,
+//! `spikes`, `qpcr`; `stats` per well) through [`AnalysisMeasure`].
 
 mod analysis;
 mod gate;
@@ -72,7 +72,7 @@ pub struct MeasureSpec {
     pub fields: Vec<String>,
     /// stats per well or field: only these wells.
     pub wells: Vec<String>,
-    /// The analysis measures (`peaks`, `chromatogram`, `assay`, `nmr-peaks`,
+    /// The analysis measures (`peaks`, `chromatogram`, `assay`, `nmr-peaks`, `nmr-cross-peaks`,
     /// `ephys-features`, `spikes`, `qpcr`) and `scans`: the arguments of that MCP tool, plus
     /// `rows` (which record list becomes rows).
     pub options: serde_json::Map<String, serde_json::Value>,

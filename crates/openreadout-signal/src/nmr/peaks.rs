@@ -67,7 +67,7 @@ pub fn noise_sd(y: &[f64]) -> f64 {
     sds[(sds.len() - 1) / 4]
 }
 
-fn median_in_place(v: &mut [f64]) -> f64 {
+pub(super) fn median_in_place(v: &mut [f64]) -> f64 {
     v.sort_by(f64::total_cmp);
     let n = v.len();
     if n == 0 {
@@ -226,8 +226,12 @@ fn prominence(y: &[f64], i: usize, sign: f64) -> f64 {
 
 /// Full width at half of `h` around point `i`, in points.
 fn half_width(y: &[f64], i: usize, sign: f64, h: f64) -> Option<f64> {
+    half_width_of(y.len(), i, h, |k| sign * y[k])
+}
+
+/// Full width at half of `h` around point `i` of the `n`-point profile `v`, in points.
+pub(super) fn half_width_of(n: usize, i: usize, h: f64, v: impl Fn(usize) -> f64) -> Option<f64> {
     let half = h / 2.0;
-    let v = |k: usize| sign * y[k];
     // left
     let mut k = i;
     let left = loop {
@@ -246,7 +250,7 @@ fn half_width(y: &[f64], i: usize, sign: f64, h: f64) -> Option<f64> {
     };
     let mut k = i;
     let right = loop {
-        if k + 1 >= y.len() {
+        if k + 1 >= n {
             return None;
         }
         let (cur, nxt) = (v(k), v(k + 1));

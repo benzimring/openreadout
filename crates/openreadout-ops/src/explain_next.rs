@@ -48,9 +48,23 @@ pub fn analysis_commands(info: &FileInfo, file: &str) -> Vec<String> {
                     "openreadout trace {file} --tidy --json   # min, max, mean and time of the maximum for every sweep and channel"
                 ));
             }
-            "nmr" => out.push(format!(
-                "openreadout analyze nmr-peaks {file} --json   # peak list and the tallest peak (ppm); --integrate A:B for integrals"
-            )),
+            "nmr" => {
+                // a stored 2D spectrum: more than one row and a shift axis for them
+                let two_d = info.traces.iter().any(|t| {
+                    t.sweep_count > 1
+                        && t.extra.contains_key("sweep_axis")
+                        && t.extra.get("kind").and_then(|k| k.as_str()) != Some("time_domain")
+                });
+                out.push(if two_d {
+                    format!(
+                        "openreadout analyze nmr-cross-peaks {file} --json   # cross peaks of the 2D spectrum: F2 and F1 shifts, sign, S/N"
+                    )
+                } else {
+                    format!(
+                        "openreadout analyze nmr-peaks {file} --json   # peak list and the tallest peak (ppm); --integrate A:B for integrals"
+                    )
+                });
+            }
             "chromatography" => {
                 out.push(format!(
                     "openreadout analyze peaks {file} --json   # integrated peaks (RT, area, height, area %, S/N)"
@@ -137,6 +151,17 @@ mod tests {
         let mut nmr = info("nmr", "bruker-nmr");
         nmr.traces.push(TraceInfo::default());
         assert!(analysis_commands(&nmr, "d")[0].contains("nmr-peaks"));
+        nmr.traces.push(TraceInfo {
+            sweep_count: 512,
+            extra: [(
+                "sweep_axis".to_string(),
+                serde_json::json!({"nucleus": "13C"}),
+            )]
+            .into_iter()
+            .collect(),
+            ..TraceInfo::default()
+        });
+        assert!(analysis_commands(&nmr, "d")[0].contains("nmr-cross-peaks"));
         let mut img = info("microscopy", "czi");
         let mut im = ImageInfo::new(0, 4, 4, PixelType::Uint8);
         im.samples_per_pixel = 3;

@@ -31,8 +31,8 @@ pub struct BatchArgs {
     pub formats: Vec<String>,
     /// The measure's options. Analyses: the arguments of that analysis's tool
     /// (openreadout_peaks, openreadout_nmr_peaks, openreadout_assay with its `analysis`, ...), plus `rows` (which record list becomes rows: peaks
-    /// peak|compound|chromatogram|band|region, nmr-peaks peak|integral|spectrum,
-    /// ephys-features sweep|cell|spike, qpcr record|rq|standard_curve, assay
+    /// peak|compound|chromatogram|band|region, nmr-peaks peak|integral|spectrum, nmr-cross-peaks
+    /// cross_peak, ephys-features sweep|cell|spike, qpcr record|rq|standard_curve, assay
     /// wells|samples|compounds|kinetics|growth|quality).
     /// stats: image, select, level, per (channel|image|plane|well|field), wells, mip (z|t).
     /// trace: trace, sweep, channels. table: table, parameters, compensate, transform,
@@ -119,7 +119,7 @@ impl InstrumentServer {
         name = "openreadout_batch",
         annotations(title = "Measure many files", read_only_hint = false, destructive_hint = true, idempotent_hint = true, open_world_hint = false),
         output_schema = crate::tools::output_schema::<openreadout_batch::BatchOutput>(),
-        description = "One measure over many files as one tidy table, optionally joined to sample sheets or plate maps (the join key is chosen from the data and reported in joins[] with unmatched rows) and summarized by group (by; test against a control). Analyses (peaks, chromatogram, nmr-peaks, ephys-features, spikes, qpcr, gate, assay) take the arguments of their tools as options. Inputs (paths): files, directories, globs or an index query. Returns at most limit rows (page with offset; output writes them all to a file); a failing file is a row with error. openreadout_summarize regroups a table written by an earlier output."
+        description = "One measure over many files as one tidy table, optionally joined to sample sheets or plate maps (the join key is chosen from the data and reported in joins[] with unmatched rows) and summarized by group (by; test against a control). Analyses (peaks, chromatogram, nmr-peaks, nmr-cross-peaks, ephys-features, spikes, qpcr, gate, assay) take the arguments of their tools as options. Inputs (paths): files, directories, globs or an index query. Returns at most limit rows (page with offset; output writes them all to a file); a failing file is a row with error. openreadout_summarize regroups a table written by an earlier output."
     )]
     pub(crate) async fn batch(
         &self,

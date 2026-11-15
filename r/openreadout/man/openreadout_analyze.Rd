@@ -10,8 +10,8 @@ openreadout_analyze(x, kind, ...)
 \item{x}{A path or an \code{\link[=openreadout_open]{openreadout_open()}} file (\code{"qpcr"}, \code{"assay"} and \code{"gate"} read the
 file by its path).}
 
-\item{kind}{The analysis: \code{"peaks"}, \code{"chromatogram"}, \code{"nmr-peaks"}, \code{"ephys-features"},
-\code{"spikes"}, \code{"qpcr"}, \code{"assay"} or \code{"gate"}.}
+\item{kind}{The analysis: \code{"peaks"}, \code{"chromatogram"}, \code{"nmr-peaks"}, \code{"nmr-cross-peaks"},
+\code{"ephys-features"}, \code{"spikes"}, \code{"qpcr"}, \code{"assay"} or \code{"gate"}.}
 
 \item{...}{The options of \code{kind} (see the sections).}
 }

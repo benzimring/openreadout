@@ -77,7 +77,7 @@ nuclei$count
 
 Analyses:
 
-- `openreadout_analyze(x, kind, ...)`: `openreadout analyze KIND`. `"chromatogram"` and `"peaks"` return data frames of chromatograms and integrated peaks, or band areas on a spectrum (see [Chromatograms and peaks](quantitation.md)); `"qpcr"` returns one row per well and target with Cq and Tm, with ΔΔCq and standard curves in the `report` attribute; `"nmr-peaks"`, `"ephys-features"`, `"spikes"`, `"assay"` and `"gate"` return the command's JSON as a list. The options are those of the MCP tool `openreadout_analyze`, with 1-based indices.
+- `openreadout_analyze(x, kind, ...)`: `openreadout analyze KIND`. `"chromatogram"` and `"peaks"` return data frames of chromatograms and integrated peaks, or band areas on a spectrum (see [Chromatograms and peaks](quantitation.md)); `"qpcr"` returns one row per well and target with Cq and Tm, with ΔΔCq and standard curves in the `report` attribute; `"nmr-peaks"`, `"nmr-cross-peaks"`, `"ephys-features"`, `"spikes"`, `"assay"` and `"gate"` return the command's JSON as a list. The options are those of the MCP tool `openreadout_analyze`, with 1-based indices.
 
 Many files and export:
 

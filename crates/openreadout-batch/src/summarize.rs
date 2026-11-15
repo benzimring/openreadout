@@ -192,6 +192,7 @@ pub fn primary_values(measure: &str, t: &Table) -> Vec<String> {
             "mean",
         ],
         "nmr-peaks" => &["ppm", "height", "value", "main_peak_ppm"],
+        "nmr-cross-peaks" => &["f2_ppm", "f1_ppm", "height", "snr"],
         "ephys-features" => &[
             "spike_count",
             "rheobase_pa",

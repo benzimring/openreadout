@@ -159,7 +159,7 @@ The figure is drawn once. `png(scale)`, `svg()`, `pdf()` and `save()` render it 
 
 ### Analyses
 
-`openreadout.analyze(path, kind, **options)` runs the analyses of [`openreadout analyze`](../reference/commands/analyze.md): `kind` is `"peaks"`, `"chromatogram"`, `"nmr-peaks"`, `"ephys-features"`, `"spikes"`, `"qpcr"`, `"assay"` or `"gate"`. It returns the same dict as the command's `--json` data. The keyword arguments are the arguments of that analysis's MCP tool (see [MCP tools](../reference/mcp.md); for `"assay"`, `analysis=` picks the analysis and the plate options are plain keyword arguments); write the option `from` as `from_=`. A dose-response fit on a test plate from the repository:
+`openreadout.analyze(path, kind, **options)` runs the analyses of [`openreadout analyze`](../reference/commands/analyze.md): `kind` is `"peaks"`, `"chromatogram"`, `"nmr-peaks"`, `"nmr-cross-peaks"`, `"ephys-features"`, `"spikes"`, `"qpcr"`, `"assay"` or `"gate"`. It returns the same dict as the command's `--json` data. The keyword arguments are the arguments of that analysis's MCP tool (see [MCP tools](../reference/mcp.md); for `"assay"`, `analysis=` picks the analysis and the plate options are plain keyword arguments); write the option `from` as `from_=`. A dose-response fit on a test plate from the repository:
 
 ```python
 r = openreadout.analyze("assay-synth-dose-response.csv", "assay", analysis="dose-response",

@@ -1,7 +1,7 @@
 //! The analysis tools: `openreadout_peaks`, `openreadout_chromatogram`,
-//! `openreadout_nmr_peaks`, `openreadout_ephys_features`, `openreadout_spikes`,
-//! `openreadout_qpcr` and `openreadout_gate`, one per `openreadout analyze` subcommand. The
-//! plate-reader assays are in `assay.rs`.
+//! `openreadout_nmr_peaks`, `openreadout_nmr_cross_peaks`, `openreadout_ephys_features`,
+//! `openreadout_spikes`, `openreadout_qpcr` and `openreadout_gate`, one per `openreadout analyze`
+//! subcommand. The plate-reader assays are in `assay.rs`.
 //!
 //! Each tool's arguments are `file`, `strict` and the analysis's own options as top-level
 //! arguments. They are run by `openreadout_batch::analyze`, which the Python and R bindings and
@@ -193,7 +193,7 @@ pub(super) struct QpcrArgs {
 }
 
 use openreadout_quant::api::{ChromatogramQuery, PeaksQuery};
-use openreadout_signal::api::{EphysQuery, NmrQuery, SpikesQuery};
+use openreadout_signal::api::{CrossPeakQuery, EphysQuery, NmrQuery, SpikesQuery};
 
 #[tool_router(router = analyses_router, vis = "pub(super)")]
 impl InstrumentServer {
@@ -257,6 +257,29 @@ impl InstrumentServer {
         call(
             self,
             AnalyzeKind::NmrPeaks,
+            a.file,
+            a.strict,
+            a.options,
+            None,
+            &ctx,
+        )
+        .await
+    }
+
+    #[tool(
+        name = "openreadout_nmr_cross_peaks",
+        annotations(title = "Find 2D NMR cross peaks", read_only_hint = true, destructive_hint = false, idempotent_hint = true, open_world_hint = false),
+        output_schema = output_schema::<openreadout_signal::nmr::CrossPeakReport>(),
+        description = "Cross peaks of a stored 2D NMR spectrum (Bruker pdata with 2rr, JCAMP-DX nD; HSQC, HMBC, COSY, TOCSY, NOESY, ROESY): F2 and F1 shifts in ppm, signed height, S/N, widths, and the flags on_diagonal and mirror_partner. Truncation ripples and decoupling sidebands are left out (ripple_fraction). Read notes for axis corrections and referencing problems."
+    )]
+    pub(crate) async fn nmr_cross_peaks(
+        &self,
+        Parameters(a): Parameters<AnalysisArgs<CrossPeakQuery>>,
+        ctx: RequestContext<RoleServer>,
+    ) -> Result<CallToolResult, McpError> {
+        call(
+            self,
+            AnalyzeKind::NmrCrossPeaks,
             a.file,
             a.strict,
             a.options,

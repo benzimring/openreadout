@@ -1,6 +1,6 @@
 # NMR processing
 
-OpenReadout can turn NMR FIDs into spectra, pick peaks and integrate regions. This works on top of the Bruker, Varian/Agilent, JEOL, Magritek Spinsolve and JCAMP-DX readers. Use it with `openreadout analyze nmr-peaks`, with `--process` on `trace`, `export` and `preview`, or through the MCP tool `openreadout_nmr_peaks`. This page describes the processing steps, their defaults and how they were validated. It is not a file format; its vocabulary table covers the analysis code. Code: `crates/openreadout-signal/src/nmr/`. Provenance: [`docs/provenance/nmr-processing.md`](https://github.com/openreadout/openreadout/blob/main/docs/provenance/nmr-processing.md).
+OpenReadout can turn NMR FIDs into spectra, pick peaks and integrate regions, and pick the cross peaks of stored 2-D spectra. This works on top of the Bruker, Varian/Agilent, JEOL, Magritek Spinsolve and JCAMP-DX readers. Use it with `openreadout analyze nmr-peaks` and `openreadout analyze nmr-cross-peaks`, with `--process` on `trace`, `export` and `preview`, or through the MCP tools `openreadout_nmr_peaks` and `openreadout_nmr_cross_peaks`. This page describes the processing steps, their defaults and how they were validated. It is not a file format; its vocabulary table covers the analysis code. Code: `crates/openreadout-signal/src/nmr/`. Provenance: [`docs/provenance/nmr-processing.md`](https://github.com/openreadout/openreadout/blob/main/docs/provenance/nmr-processing.md).
 
 ## What it does
 
@@ -14,7 +14,9 @@ OpenReadout can turn NMR FIDs into spectra, pick peaks and integrate regions. Th
   `extra.axis` in ppm), so `export --process --format jcamp|csv|parquet` writes the spectrum.
 
 Only 1-D processing is done: a `ser` or arrayed FID is processed row by row (`--sweep`), the
-indirect dimension of 2-D data is not transformed.
+indirect dimension of 2-D data is not transformed. A stored 2-D spectrum (Bruker `pdata/<n>`
+with `2rr`, a JCAMP-DX nD NMR spectrum) is refused with exit 6 and a hint to use
+`analyze nmr-cross-peaks`.
 
 ## FID processing (`process_fid`)
 
@@ -74,6 +76,52 @@ points (`"2 54 73"`, `"8  2"` → 19.656 points, which removed the pre-response 
 - `--auto-integrate` (MCP `auto_integrate`), without `--integrate`: one region per multiplet,
   around each group of positive peaks closer than 15 Hz, reaching 10 Hz (or the outer peak's
   half width) beyond its outer peaks; regions that then overlap are merged.
+
+## 2-D cross peaks (`analyze_cross_peaks`, `pick_cross_peaks`)
+
+`analyze nmr-cross-peaks FILE` lists the cross peaks of a 2-D spectrum the vendor software
+processed and stored. It does not process FIDs: a data set with only a `ser`, a JEOL or a Varian
+2-D FID exits 6 with a hint.
+
+- **Input** (`is_2d_spectrum`, `axes`): a frequency-domain trace with more than one sweep and a
+  chemical-shift F1 axis, at most 4096 × 4096 points. Bruker: F2 from `extra.axis`, F1 from
+  `extra.sweep_axis.axis`. When `procs` and `proc2s` name no nucleus (TopSpin 1.3), the nuclei
+  are `NUC1` of `acqus` and `acqu2s`. JCAMP-DX: both axes from the NTUPLES header, Hz divided by
+  the dimension's frequency. An axis that does not start at its `##$OFFSET=` is moved there
+  (TopSpin exports write F2 from 0 Hz). MestReNova's page labels step twice the header's
+  spacing and are not used. `notes` reports each correction, and an axis that lies outside the
+  usual shift range of its nucleus.
+- **Noise** (`noise_and_baseline`): 32 × 32 tiles, per tile 1.4826·MAD about the tile median.
+  The noise SD is the 25th percentile over tiles and `baseline` the median of the tile medians.
+  A tall peak leaves noise along F1 in its column (t1 noise), so each F2 point also has the
+  noise of its own F1 column, from the 80th percentile of |x − median| over 1.28. A peak's S/N
+  is measured against the noise of its column without the rows within a sixteenth of F1 of it.
+- **Peaks**: positive and (unless `--positive-only`) negative signal at least `--min-snr` (10)
+  × the noise SD high is grouped from the tallest point down. Where two groups meet, the lower
+  maximum stays a peak of its own when its prominence is at least `--min-prominence` (5) × its
+  column's noise. A peak is kept when its S/N is at least `--min-snr`. Peaks on the outermost
+  row or column are not reported. Position by a parabola in each dimension; widths at half
+  height along the F2 row and the F1 column.
+- **Cross peaks**: peaks of either sign within `--merge-hz` (15 Hz) in both dimensions are one
+  cross peak, placed at its tallest peak. `maxima` counts them. The components of a COSY
+  multiplet alternate in sign.
+- **Ripples and sidebands**: a peak at most `--ripple-fraction` (0.2) of a taller cross peak is
+  left out when it lies in that cross peak's F2 column within 2 of its F1 widths (the ripples
+  a truncated t1 leaves beside a peak), or, on heteronuclear spectra, in its F1 row within
+  1000 Hz with a second one at the same distance on the other side (decoupling sidebands).
+  `notes` gives the number left out.
+- **Homonuclear spectra**: cross peaks within two points or 15 Hz of F1 = F2 are flagged
+  `on_diagonal`. The others get `mirror_partner`: whether a cross peak lies at the swapped
+  position.
+- **Experiment** (`experiment_kind`): from the pulse program name stored in the file
+  (`PULPROG`, `##.PULSE SEQUENCE=`): `hsqc` (`hsqced…`: `multiplicity_edited`), `hmqc`, `hmbc`,
+  `cosy`, `tocsy` (`mlev`, `dipsi`), `noesy`, `roesy`; else `heteronuclear`, `homonuclear` or
+  `unknown` from the two nuclei. `--experiment KIND` overrides it (`kind_source`). The sign of
+  an edited HSQC cross peak is reported as stored, because which multiplicity group is negative
+  depends on how the spectrum was phased.
+- **Table**: cross peaks are listed high F2 shift first, then high F1, at most
+  `--max-cross-peaks` (500, the highest S/N), with `cross_peak_count` the number found. Above
+  100, `notes` gives the number at 2, 5 and 10 times `--min-snr`.
 
 ## Validation (automated in `crates/openreadout-corpus-tests/tests/nmr_processing.rs`)
 
@@ -198,9 +246,40 @@ CARBON_01: `proc='lp'`, `ddrtc` 364 µs) need a first-order phase beyond the aut
 0.54 s with automatic phasing, 23 MB peak memory. The largest transform is 2²² points
 (`MAX_TRANSFORM_SIZE`).
 
+### 2-D cross peaks (2026-11-14: 6 spectra, 2 depositors)
+
+Automated in `crates/openreadout-corpus-tests/tests/nmr_cross_peaks.rs` against correlations the
+depositors picked. A correlation counts as found within 0.02 ppm in F2 and 0.6 ppm (13C) or
+0.03 ppm (1H) in F1.
+
+| data set | experiment | depositor correlations | found | cross peaks listed |
+| --- | --- | --- | --- | --- |
+| `nmrxiv-s73-bundle/5` (nicotinic acid, NMRium zones) | edited HSQC | 4 | 4 | 7 |
+| `nmrxiv-s73-bundle/4` | COSY | 3 | 3 | 38 |
+| `nmrxiv-s73-bundle/6` | HMBC | 12 | 12 | 20 |
+| `nmrxiv-s572-bundle/5` (curcumin, NMReDATA) | edited HSQC | 7 | 7 | 22 |
+| `nmrxiv-s572-bundle/6` | HMBC | 21 | 20 | 61 |
+| `nmrxiv-s572-bundle/3` | COSY | 6 | 3 | 95 |
+
+The COSY misses are the three long-range couplings of the curcumin enol H (6.05 ppm), at S/N 3
+to 8 against the t1 noise of their columns; the HMBC miss is C3/H2 (7.31 / 147.97 ppm). Most
+extra cross peaks have a lower S/N than the depositors' ones: solvent and impurity signals,
+weaker relayed correlations, and t1 noise near strong lines. The JCAMP-DX axis corrections
+are checked on `nmrxiv-s37-hsqc-jdx` (the ethylbenzene CH₃ at 1.19 / 16.0 ppm and aromatic CH at
+7.28 / 128.8 ppm), `nmrxiv-s1-cosy-dx` (the diagonal on F1 = F2) and `zenodo10800686-17-hsqc`
+(an OCH₃ at 3.69 / 54.5 ppm).
+
 ## Known gaps
 
-- 1-D only; no second-dimension transform, NUS reconstruction or linear prediction.
+- FID processing is 1-D only: no second-dimension transform, NUS reconstruction or linear
+  prediction. Cross peaks are picked on 2-D spectra the vendor software processed and stored.
+- Cross peaks of spectra acquired with non-uniform sampling include reconstruction artifacts
+  above the default S/N (a note says so); on an HMBC sampled at 11 % (`nmrxiv-s1407-bundle/HMBC`)
+  thousands of maxima pass `--min-snr 10`, about a hundred pass 100.
+- Cross peaks are not assigned to multiplicities, and 2-D spectra are not symmetrized.
+- A cross peak stored out of phase is listed as two cross peaks of opposite sign, and truncation
+  ripples further than 2 F1 widths from their peak are listed.
+- 3D processed spectra and Varian processed data are not read.
 - Linear prediction (Bruker `ME_mod`, VnmrJ `proc='lp'`) is not done: spectra the vendor processed
   with it differ at the start of the FID (a note says so). Varian `lp` is not reproduced.
 - Real-only (`AQ_mod` 0/2) FIDs are refused (exit 6).
@@ -238,3 +317,13 @@ CARBON_01: `proc='lp'`, `ddrtc` 364 µs) need a first-order phase beyond the aut
 | `NmrReport`, `path`, `format`, `trace_name`, `processing`, `noise_sd`, `peak_options`, `peak_count`, `main_peak` | `analyze nmr-peaks` output |
 | `ChosenSpectrum`, `spectrum`, `load`, `analyze` | the spectrum used and the analysis entry points |
 | `ProcessedNmrDataset`, `record` | dataset wrapper behind `--process` |
+| `CrossPeakOptions`, `positive_only`, `f2_range_ppm`, `f1_range_ppm`, `merge_hz`, `ripple_fraction`, `max_cross_peaks` | cross-peak thresholds and limits |
+| `DEFAULT_MERGE_HZ`, `DEFAULT_RIPPLE_FRACTION`, `RIPPLE_WIDTHS`, `SIDEBAND_HZ`, `MAX_POINTS`, `LONG_TABLE_ROWS`, `SNR_LEVELS` | their defaults and fixed limits |
+| `CrossPeakRequest`, `experiment` | `analyze nmr-cross-peaks` request |
+| `CrossPeakQuery`, `min_prominence` | the same request as JSON arguments (MCP `openreadout_nmr_cross_peaks`, batch `nmr-cross-peaks`) |
+| `SpectrumDimension`, `axes`, `is_2d_spectrum` | the F2 and F1 axes of a stored 2-D spectrum |
+| `ExperimentInfo`, `kind`, `multiplicity_edited`, `pulse_program`, `kind_source`, `experiment_kind` | what kind of 2-D experiment |
+| `CrossPeak`, `f2_ppm`, `f1_ppm`, `f2_width_hz`, `f1_width_hz`, `f2_index`, `f1_index`, `maxima`, `on_diagonal`, `mirror_partner` | one cross peak |
+| `CrossPeakReport`, `f2`, `f1`, `options`, `cross_peak_count`, `cross_peaks`, `analyze_cross_peaks` | `analyze nmr-cross-peaks` output and entry point |
+| `Matrix`, `data`, `rows`, `cols`, `noise_and_baseline`, `pick_cross_peaks` | the 2-D spectrum in memory and the picker |
+| `Picked`, `count`, `ripples`, `at_snr_levels` | what the picker found |

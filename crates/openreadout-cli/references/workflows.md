@@ -73,3 +73,11 @@ openreadout export sucrose/13 --trace 1 -o c13.csv --json # columns chemical_shi
 
 Report `extra.nucleus`, `spectrometer_frequency_mhz`, `pulse_program`, `solvent`, `temperature_k`, `scans` and `acquired_at` of trace 0. In Python: `pandas.read_csv("c13.csv")`, or `openreadout.File("sucrose/13").read_trace(1, channel="real")` with `trace_axis(1)` for the ppm values. A 2D `ser` is one sweep per increment (`--sweep S`). JCAMP-DX exports (`.jdx`, `.dx`) from TopSpin, MestReNova or spectral databases work the same way.
 
+For a stored 2-D spectrum (HSQC, HMBC, COSY, TOCSY, NOESY, ROESY), list its cross peaks:
+
+```bash
+openreadout analyze nmr-cross-peaks sample/5 --json   # experiment.kind, f2/f1 nuclei and axes, cross_peaks[]
+```
+
+Each cross peak has `f2_ppm` (1H), `f1_ppm` (13C on an HSQC or HMBC), a signed `height` (on an edited HSQC one multiplicity group is negative) and `snr`. Read `notes` before the table. They say when an axis was corrected or is referenced wrongly. `analyze nmr-peaks` refuses a 2-D spectrum.
+

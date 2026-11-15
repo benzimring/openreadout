@@ -255,7 +255,7 @@ openreadout mcp --install vscode          # VS Code / Copilot
 openreadout mcp --install gemini          # Gemini CLI
 ```
 
-Windsurf, Zed, Continue, and Cline are supported too. The server exposes 28 tools (`openreadout_info`, `openreadout_check`, `openreadout_preview`, `openreadout_export`, `openreadout_peaks`, ...) over JSON-RPC, so the client doesn't need shell access.
+Windsurf, Zed, Continue, and Cline are supported too. The server exposes 29 tools (`openreadout_info`, `openreadout_check`, `openreadout_preview`, `openreadout_export`, `openreadout_peaks`, ...) over JSON-RPC, so the client doesn't need shell access.
 
 ### Claude Code Plugin
 

@@ -358,6 +358,7 @@ mod tests {
                 "openreadout_index",
                 "openreadout_info",
                 "openreadout_link",
+                "openreadout_nmr_cross_peaks",
                 "openreadout_nmr_peaks",
                 "openreadout_peaks",
                 "openreadout_plot",

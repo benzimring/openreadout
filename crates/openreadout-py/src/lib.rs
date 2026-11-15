@@ -723,7 +723,7 @@ impl NativeFile {
     }
     /// `analyze KIND` on this file (`options`: the JSON object of the arguments of that kind's
     /// MCP tool) for the kinds that read one data set (peaks, chromatogram,
-    /// nmr-peaks, ephys-features, spikes) → the analysis output as JSON.
+    /// nmr-peaks, nmr-cross-peaks, ephys-features, spikes) → the analysis output as JSON.
     fn analyze_json(&self, py: Python<'_>, kind: String, options: String) -> PyResult<String> {
         let kind = analyze_kind(py, &kind)?;
         let o = options_map(&options)?;

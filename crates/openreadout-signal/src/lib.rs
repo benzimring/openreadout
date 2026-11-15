@@ -3,7 +3,8 @@
 //! - [`nmr`]: 1-D NMR processing from the free induction decay (digital-filter group-delay
 //!   removal, apodization, zero filling, Fourier transform, phase correction from stored or
 //!   automatically fitted phases, baseline correction, ppm referencing) and peak picking /
-//!   integration on a processed spectrum (computed here or stored by the vendor software).
+//!   integration on a processed spectrum (computed here or stored by the vendor software), and
+//!   the cross peaks of a stored 2D spectrum.
 //!   Notes and vocabulary: `docs/formats/nmr-processing.md`; provenance:
 //!   `docs/provenance/nmr-processing.md`.
 //! - [`ephys`]: patch-clamp analysis (action-potential detection and features per sweep,

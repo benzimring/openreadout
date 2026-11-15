@@ -10,7 +10,7 @@ openreadout batch [OPTIONS] <MEASURE> [PATH]...
 
 - `stats`, `trace`, `table`, `info`: the same rows as those commands in table mode.
 - `scans`: one row per mass-spectrometry scan header.
-- `peaks`, `chromatogram`, `assay`, `nmr-peaks`, `ephys-features`, `spikes`, `qpcr`, `gate`: the [`analyze`](analyze.md) subcommands. `assay` takes `--set analysis=wells|curve|dose-response|kinetics|growth|qc`.
+- `peaks`, `chromatogram`, `assay`, `nmr-peaks`, `nmr-cross-peaks`, `ephys-features`, `spikes`, `qpcr`, `gate`: the [`analyze`](analyze.md) subcommands. `assay` takes `--set analysis=wells|curve|dose-response|kinetics|growth|qc`.
 
 To summarize a table written earlier, see [`summarize`](summarize.md).
 

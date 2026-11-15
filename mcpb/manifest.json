@@ -107,6 +107,10 @@
       "description": "NMR peak list and region integrals, from the vendor's spectrum or the FID"
     },
     {
+      "name": "openreadout_nmr_cross_peaks",
+      "description": "Cross peaks of a stored 2D NMR spectrum (HSQC, HMBC, COSY, TOCSY, NOESY, ROESY): both shifts, height and sign, S/N"
+    },
+    {
       "name": "openreadout_ephys_features",
       "description": "Patch-clamp features: action potentials, rheobase, f-I slope, passive properties"
     },

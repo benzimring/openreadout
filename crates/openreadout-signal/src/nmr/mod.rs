@@ -2,10 +2,12 @@
 //!
 //! [`analyze`] is what `openreadout analyze nmr-peaks` and the `openreadout_nmr_peaks` MCP tool
 //! run: choose a spectrum (the vendor's processed one, or the FID processed here), pick peaks,
-//! integrate regions. [`ProcessedNmrDataset`] wraps any NMR dataset so that its FID traces read
+//! integrate regions. [`analyze_cross_peaks`] is `analyze nmr-cross-peaks`: the cross peaks of a
+//! stored 2D spectrum. [`ProcessedNmrDataset`] wraps any NMR dataset so that its FID traces read
 //! as processed spectra (`trace --process`, `export --process`, `preview --process`).
 
 pub mod baseline;
+pub mod cross_peaks;
 mod dataset;
 pub mod peaks;
 pub mod phase;
@@ -16,9 +18,13 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use openreadout_core::model::FileInfo;
-use openreadout_core::{Dataset, Result};
+use openreadout_core::{Dataset, Error, Result};
 
 pub use baseline::BaselineMode;
+pub use cross_peaks::{
+    CrossPeak, CrossPeakOptions, CrossPeakReport, CrossPeakRequest, ExperimentInfo,
+    SpectrumDimension, analyze_cross_peaks,
+};
 pub use dataset::ProcessedNmrDataset;
 pub use peaks::{Integral, Peak, PeakOptions, integrate, noise_sd, pick_peaks};
 pub use process::{
@@ -140,6 +146,13 @@ pub fn load(ds: &mut dyn Dataset, info: &FileInfo, req: &NmrRequest) -> Result<C
             notes,
         })
     } else {
+        if cross_peaks::is_2d_spectrum(&t) {
+            return Err(Error::unsupported(
+                "nmr-processing",
+                format!("trace {index} is a 2D spectrum ({} F1 rows)", t.sweep_count),
+                "Use `openreadout analyze nmr-cross-peaks` (MCP openreadout_nmr_cross_peaks) for the cross peaks of a 2D spectrum. To look at one row of a 2D FID as a 1-D spectrum, use `--from fid --sweep N`.",
+            ));
+        }
         let (mut real, axis) = source::load_spectrum(ds, info, index)?;
         let mut notes = Vec::new();
         if req.baseline_on_stored

@@ -1,5 +1,5 @@
 //! The analyses as batch measures: `peaks`, `chromatogram`, `assay`, `nmr-peaks`,
-//! `ephys-features`, `spikes`, `qpcr`, and `stats` per well (`well-stats`). Each runs the same library call as the
+//! `nmr-cross-peaks`, `ephys-features`, `spikes`, `qpcr`, and `stats` per well (`well-stats`). Each runs the same library call as the
 //! single-file command (and its MCP tool) with the same JSON options, then turns the report's
 //! records into rows: the numbers are those of the single-file output, cell for cell.
 //!
@@ -22,11 +22,12 @@ use crate::table::{ColumnDoc, Row, Value};
 
 /// The analysis measures by name (the `openreadout analyze` subcommands other than `gate`,
 /// which is a built-in measure, with the plate-reader assays as one measure, `assay`).
-pub const ANALYSIS_MEASURES: [&str; 7] = [
+pub const ANALYSIS_MEASURES: [&str; 8] = [
     "peaks",
     "chromatogram",
     "assay",
     "nmr-peaks",
+    "nmr-cross-peaks",
     "ephys-features",
     "spikes",
     "qpcr",
@@ -94,6 +95,7 @@ enum Kind {
     Chromatogram(Box<openreadout_quant::api::ChromatogramQuery>),
     Assay(Box<openreadout_assay::AssayRequest>),
     Nmr(Box<openreadout_signal::api::NmrQuery>),
+    CrossPeaks(Box<openreadout_signal::api::CrossPeakQuery>),
     Ephys(Box<openreadout_signal::api::EphysQuery>),
     Spikes(Box<openreadout_signal::api::SpikesQuery>),
     Qpcr(Box<QpcrQuery>),
@@ -187,6 +189,7 @@ impl AnalysisMeasure {
                 "quality",
             ],
             "nmr-peaks" => &["peak", "integral", "spectrum"],
+            "nmr-cross-peaks" => &["cross_peak"],
             "ephys-features" => &["sweep", "cell", "spike"],
             "spikes" => &["channel"],
             "qpcr" => &["record", "rq", "standard_curve"],
@@ -223,6 +226,7 @@ impl AnalysisMeasure {
             "chromatogram" => Kind::Chromatogram(Box::new(parse_options(id, &opts)?)),
             "assay" => Kind::Assay(Box::new(parse_options(id, &opts)?)),
             "nmr-peaks" => Kind::Nmr(Box::new(parse_options(id, &opts)?)),
+            "nmr-cross-peaks" => Kind::CrossPeaks(Box::new(parse_options(id, &opts)?)),
             "ephys-features" => Kind::Ephys(Box::new(parse_options(id, &opts)?)),
             "spikes" => Kind::Spikes(Box::new(parse_options(id, &opts)?)),
             "qpcr" => Kind::Qpcr(Box::new(parse_options(id, &opts)?)),
@@ -232,6 +236,7 @@ impl AnalysisMeasure {
         // per file.
         match &kind {
             Kind::Nmr(q) => drop(q.request()?),
+            Kind::CrossPeaks(q) => drop(q.request()?),
             Kind::Ephys(q) => drop(q.request()?),
             Kind::Spikes(q) => drop(q.request()?),
             Kind::Peaks(q) => drop(q.source.request()?),
@@ -396,6 +401,7 @@ impl Measure for AnalysisMeasure {
             ("nmr-peaks", "peak") => &["peak"],
             ("nmr-peaks", "integral") => &["region"],
             ("nmr-peaks", _) | ("ephys-features", "cell") => &[],
+            ("nmr-cross-peaks", _) => &["cross_peak"],
             ("ephys-features", "sweep") => &["sweep"],
             ("ephys-features", _) => &["sweep", "index"],
             ("spikes", _) => &["channel"],
@@ -443,6 +449,18 @@ impl Measure for AnalysisMeasure {
                 ColumnDoc::key("peak", "peak number, tallest-first as reported, from 0"),
                 ColumnDoc::key("region", "integration region, in the order given, from 0"),
                 ColumnDoc::unit("ppm", "ppm", "chemical shift"),
+            ],
+            "nmr-cross-peaks" => vec![
+                ColumnDoc::key(
+                    "cross_peak",
+                    "cross peak number, high F2 shift first as reported, from 0",
+                ),
+                ColumnDoc::unit("f2_ppm", "ppm", "shift in the direct dimension"),
+                ColumnDoc::unit("f1_ppm", "ppm", "shift in the indirect dimension"),
+                ColumnDoc::value(
+                    "height",
+                    "stored value at the maximum (negative for a negative cross peak)",
+                ),
             ],
             "ephys-features" => vec![ColumnDoc::key("sweep", "sweep index, from 0")],
             "spikes" => vec![
@@ -560,6 +578,18 @@ impl Measure for AnalysisMeasure {
                     )],
                     _ => numbered("peak", &out.peaks, &[]),
                 }
+            }
+            Kind::CrossPeaks(q) => {
+                let req = q.request()?;
+                let out = openreadout_signal::nmr::analyze_cross_peaks(it.dataset, it.info, &req)?;
+                numbered("cross_peak", &out.cross_peaks, &[])
+                    .into_iter()
+                    .map(|r| {
+                        let mut n = Row::new().with("experiment", out.experiment.kind.as_str());
+                        n.cells.extend(r.cells);
+                        n
+                    })
+                    .collect()
             }
             Kind::Ephys(q) => {
                 let mut req = q.request()?;

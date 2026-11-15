@@ -1,5 +1,6 @@
-//! JSON queries for `analyze nmr-peaks`, `analyze ephys-features` and `analyze spikes`, shared
-//! by the MCP tool (`openreadout_nmr_peaks`, `openreadout_ephys_features`, `openreadout_spikes`) and batch
+//! JSON queries for `analyze nmr-peaks`, `analyze nmr-cross-peaks`, `analyze ephys-features` and
+//! `analyze spikes`, shared by the MCP tools (`openreadout_nmr_peaks`,
+//! `openreadout_nmr_cross_peaks`, `openreadout_ephys_features`, `openreadout_spikes`) and batch
 //! tables (`openreadout batch nmr-peaks …`, MCP `openreadout_batch`): the same field names
 //! and defaults everywhere.
 
@@ -12,7 +13,8 @@ use serde::Deserialize;
 
 use crate::ephys::{ApSettings, CellRequest, DetectSettings, PeakSign, SpikesRequest};
 use crate::nmr::{
-    Apodization, BaselineMode, NmrRequest, PeakOptions, PhaseMode, ProcessOptions, SpectrumSource,
+    Apodization, BaselineMode, CrossPeakOptions, CrossPeakRequest, NmrRequest, PeakOptions,
+    PhaseMode, ProcessOptions, SpectrumSource,
 };
 
 /// Peak list and integrals of a 1-D NMR spectrum.
@@ -57,6 +59,81 @@ pub struct NmrQuery {
     pub auto_integrate: bool,
     /// Normalise integrals so region `[index, value]` has that value (default `[0, 1]`).
     pub integral_reference: Option<(usize, f64)>,
+}
+
+/// Cross peaks of a stored 2D NMR spectrum.
+#[derive(Debug, Default, Clone, Deserialize, JsonSchema)]
+pub struct CrossPeakQuery {
+    /// Trace index (default: the first stored 2D spectrum).
+    pub trace: Option<u32>,
+    /// Report this experiment kind instead of the one inferred from the pulse program: `hsqc`,
+    /// `hmqc`, `hmbc`, `cosy`, `tocsy`, `noesy`, `roesy`, `heteronuclear`, `homonuclear`.
+    pub experiment: Option<String>,
+    /// Minimum S/N: height above the baseline over the noise of the cross peak's F1 column
+    /// (default 10).
+    pub min_snr: Option<f64>,
+    /// Minimum prominence in noise SDs (default 5).
+    pub min_prominence: Option<f64>,
+    /// Minimum height as a fraction of the tallest point (default 0; e.g. 0.01).
+    pub min_height_fraction: Option<f64>,
+    /// Search positive cross peaks only (default: both signs, as edited HSQC needs).
+    #[serde(default)]
+    pub positive_only: bool,
+    /// Only pick between two F2 (direct) shifts, `[a, b]` ppm.
+    pub f2_range_ppm: Option<(f64, f64)>,
+    /// Only pick between two F1 (indirect) shifts, `[a, b]` ppm.
+    pub f1_range_ppm: Option<(f64, f64)>,
+    /// Peaks of either sign closer than this in both dimensions are one cross peak (the
+    /// components of a multiplet), Hz (default 15; 0 lists every peak).
+    pub merge_hz: Option<f64>,
+    /// Leave out peaks at most this fraction of the height of a taller cross peak in its F2
+    /// column (truncation ripples) or, on heteronuclear spectra, its F1 row (decoupling
+    /// sidebands) (default 0.2; 0 keeps them).
+    pub ripple_fraction: Option<f64>,
+    /// Keep at most this many cross peaks (highest S/N; default 500).
+    pub max_cross_peaks: Option<usize>,
+}
+
+impl CrossPeakQuery {
+    /// The request this query describes.
+    pub fn request(&self) -> Result<CrossPeakRequest> {
+        let d = CrossPeakOptions::default();
+        let options = CrossPeakOptions {
+            min_snr: self.min_snr.unwrap_or(d.min_snr),
+            min_prominence_snr: self.min_prominence.unwrap_or(d.min_prominence_snr),
+            min_height_fraction: self.min_height_fraction.unwrap_or(d.min_height_fraction),
+            positive_only: self.positive_only,
+            f2_range_ppm: self.f2_range_ppm,
+            f1_range_ppm: self.f1_range_ppm,
+            merge_hz: self.merge_hz.unwrap_or(d.merge_hz),
+            ripple_fraction: self.ripple_fraction.unwrap_or(d.ripple_fraction),
+            max_cross_peaks: self.max_cross_peaks.unwrap_or(d.max_cross_peaks),
+        };
+        for (name, v) in [
+            ("min_snr", options.min_snr),
+            ("min_prominence", options.min_prominence_snr),
+            ("min_height_fraction", options.min_height_fraction),
+            ("merge_hz", options.merge_hz),
+            ("ripple_fraction", options.ripple_fraction),
+        ] {
+            if !(v.is_finite() && v >= 0.0) {
+                return Err(usage(format!("{name} must be a number >= 0")));
+            }
+        }
+        for (name, r) in [
+            ("f2_range_ppm", options.f2_range_ppm),
+            ("f1_range_ppm", options.f1_range_ppm),
+        ] {
+            if r.is_some_and(|(a, b)| !(a.is_finite() && b.is_finite())) {
+                return Err(usage(format!("{name} must be two finite shifts in ppm")));
+            }
+        }
+        Ok(CrossPeakRequest {
+            trace: self.trace,
+            experiment: self.experiment.clone(),
+            options,
+        })
+    }
 }
 
 /// Per-spike rows `ephys-features` returns by default over MCP (`openreadout_ephys_features`): sweeps

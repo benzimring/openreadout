@@ -9,6 +9,11 @@ All notable changes to this project are documented here. The format is based on 
 - EEG and polysomnography recordings in the European Data Format: EDF, EDF+, BDF and BDF+ (`edf`), with one trace per sample rate, EDF+ annotations as a table and discontinuous EDF+D recordings as sweeps. Checked against pyedflib and MNE-Python.
 - BrainVision recordings (`brainvision`: `.vhdr` header, `.vmrk` markers, `.eeg` samples) in INT_16, UINT_16, INT_32, IEEE_FLOAT_32 or ASCII, multiplexed or vectorized, with the markers as a table and marker-based segments as sweeps. Checked against MNE-Python and Neo.
 - EEGLAB datasets (`eeglab`: `.set` MAT-files, with the samples inside or in a `.fdt`), continuous or epoched, with `EEG.event` as a table. A pure-Rust reader of level-5 MAT-files (compressed or not) underlies it, and MAT 7.3 (HDF5) files are read through `hdf5-pure`. Checked against SciPy, pymatreader and MNE-Python.
+- `analyze nmr-cross-peaks` (MCP `openreadout_nmr_cross_peaks`, batch measure `nmr-cross-peaks`) lists the cross peaks of a stored 2-D NMR spectrum (Bruker `pdata` with `2rr`, JCAMP-DX nD): F2 and F1 shifts, signed height, S/N, widths and the experiment kind from the pulse program. It leaves out truncation ripples and decoupling sidebands. Checked against the correlations depositors picked for nicotinic acid and curcumin on nmrXiv.
+
+### Fixed
+
+- `analyze nmr-peaks` on a stored 2-D spectrum (an HSQC `pdata/1`) read the first F1 row as if it were a 1-D spectrum and returned its noise as peaks. It now exits 6 with a hint to use `analyze nmr-cross-peaks`.
 
 ## [0.4.0] - 2026-10-17
 

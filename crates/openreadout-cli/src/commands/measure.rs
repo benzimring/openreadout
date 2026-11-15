@@ -1,6 +1,7 @@
 //! `batch MEASURE PATHS…`: any measure — `stats`, `trace`, `table`, `info`, `scans`, or an
-//! analysis (`peaks`, `chromatogram`, `assay`, `nmr-peaks`, `ephys-features`, `spikes`, `qpcr`,
-//! `gate`) — over many files as one tidy table, with sample sheets and `--by` summaries.
+//! analysis (`peaks`, `chromatogram`, `assay`, `nmr-peaks`, `nmr-cross-peaks`, `ephys-features`,
+//! `spikes`, `qpcr`, `gate`) — over many files as one tidy table, with sample sheets and `--by`
+//! summaries.
 //! Options are named as in MCP (`--set mz=[195.0877] --set ppm=10`), exactly as
 //! `openreadout_batch` takes them.
 
@@ -18,8 +19,8 @@ use super::tidy::TidyArgs;
 pub struct MeasureArgs {
     /// What to compute per data set: stats (`--set per=well` for plates), trace, table, info,
     /// scans (one row per MS scan header), or an analysis: peaks, chromatogram, assay,
-    /// nmr-peaks, ephys-features, spikes, qpcr, gate. To summarize a saved table, use
-    /// `summarize`.
+    /// nmr-peaks, nmr-cross-peaks, ephys-features, spikes, qpcr, gate. To summarize a saved
+    /// table, use `summarize`.
     #[arg(value_name = "MEASURE")]
     pub measure: String,
     /// Files, directories (with -r) or glob patterns.

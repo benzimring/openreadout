@@ -487,6 +487,7 @@ fn schema_gen() -> Result<()> {
         "table",
         "qpcr",
         "nmr-peaks",
+        "nmr-cross-peaks",
         "ephys-features",
         "spikes",
         "chromatogram",
