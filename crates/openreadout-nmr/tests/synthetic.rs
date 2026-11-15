@@ -378,3 +378,34 @@ fn jcamp_garbage_is_rejected() {
         Ok(_) => panic!("garbage opened as JCAMP-DX"),
     }
 }
+
+#[test]
+fn jcamp_nd_spectrum_reports_its_dimensions() {
+    // a 2-D spectrum as TopSpin exports it: its processing parameters once per dimension, then
+    // pages keyed by F1
+    let nd = "##TITLE= hsqc\n##JCAMP-DX= 5.01\n##DATA TYPE= nD NMR SPECTRUM\n##DATA CLASS= NTUPLES\n##$SF= 400.08\n##$AXNUC= <1H>\n##$OFFSET= 12.71422\n##$SF= 100.600196\n##$AXNUC= <13C>\n##$OFFSET= 189.4755\n##NTUPLES= nD NMR SPECTRUM\n##VAR_NAME= FREQUENCY1, FREQUENCY2, SPECTRUM\n##SYMBOL= F1, F2, Y\n##VAR_TYPE= INDEPENDENT, INDEPENDENT, DEPENDENT\n##VAR_FORM= AFFN, AFFN, ASDF\n##VAR_DIM= 2, 4, 4\n##UNITS= HZ, HZ, ARBITRARY UNITS\n##FIRST= 19061.27, 6403.99, 1\n##LAST= -4953.71, 0, 8\n##FACTOR= 1, 1, 1\n##PAGE= F1=19061.27\n##DATA TABLE= (F2++(Y..Y)), PROFILE\n6403.99 1 2 3 4\n##PAGE= F1=-4953.71\n##DATA TABLE= (F2++(Y..Y)), PROFILE\n6403.99 5 6 7 8\n##END NTUPLES= nD NMR SPECTRUM\n##END=\n";
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("hsqc.dx");
+    fs::write(&path, nd).unwrap();
+    let (_, ds) = registry().open(&path).unwrap();
+    let info = ds.info().unwrap();
+    let t = &info.traces[0];
+    assert_eq!((t.sample_count, t.sweep_count), (4, 2));
+    // the independent variable first, then the page variable
+    let dims = t.extra["dimensions"].as_array().unwrap();
+    assert_eq!(dims[0]["symbol"], "F2");
+    assert_eq!(dims[0]["first"], 6403.99);
+    assert_eq!(dims[0]["size"], 4);
+    assert_eq!(dims[1]["symbol"], "F1");
+    assert_eq!(dims[1]["last"], -4953.71);
+    assert_eq!(dims[1]["unit"], "HZ");
+    // no per-column frequency or nucleus list in this header
+    assert!(dims[1].get("observe_frequency_mhz").is_none() && dims[1].get("nucleus").is_none());
+    let p = &t.extra["dimension_parameters"];
+    assert_eq!(
+        p["spectrometer_frequency_mhz"],
+        serde_json::json!([400.08, 100.600_196])
+    );
+    assert_eq!(p["nucleus"], serde_json::json!(["1H", "13C"]));
+    assert_eq!(p["offset_ppm"], serde_json::json!([12.714_22, 189.4755]));
+}

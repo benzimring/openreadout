@@ -676,6 +676,64 @@ impl JcampDataset {
                     "sweep_axis".into(),
                     json!({"variable": pvar, "unit": unit, "values": values}),
                 );
+                // nD spectra: what the header says about the direct dimension and the page
+                // variable. A frequency or nucleus list counts as per column from two entries.
+                let per_column = |k: &str| field(k).filter(|l| l.split(',').count() >= 2);
+                let (mhz, nuclei) = (per_column(".OBSERVEFREQUENCY"), per_column(".NUCLEUS"));
+                let dimension = |sym: &str| {
+                    let i = idx(sym);
+                    let text = |list: &Option<String>| {
+                        i.and_then(|i| csv_field(list.as_deref(), i))
+                            .map(Value::from)
+                    };
+                    let number =
+                        |list: &Option<String>| i.and_then(|i| num_at(list, i)).map(Value::from);
+                    let mut d = serde_json::Map::new();
+                    d.insert("symbol".into(), json!(sym));
+                    for (key, value) in [
+                        ("unit", text(&units)),
+                        ("first", number(&firsts)),
+                        ("last", number(&lasts)),
+                        (
+                            "size",
+                            i.and_then(|i| num_at(&dims, i))
+                                .filter(|v| *v >= 0.0)
+                                .map(|v| json!(v as u64)),
+                        ),
+                        ("observe_frequency_mhz", number(&mhz)),
+                        ("nucleus", text(&nuclei)),
+                    ] {
+                        if let Some(v) = value {
+                            d.insert(key.into(), v);
+                        }
+                    }
+                    Value::Object(d)
+                };
+                e.insert(
+                    "dimensions".into(),
+                    json!([dimension(&ind), dimension(&pvar)]),
+                );
+                // TopSpin exports repeat ##$SF=, ##$AXNUC= and ##$OFFSET= once per dimension
+                let all = |key: &str| {
+                    blk.ldrs
+                        .iter()
+                        .filter(|l| l.key == key)
+                        .map(|l| l.value.trim())
+                        .collect::<Vec<_>>()
+                };
+                let (sf, axnuc, offset) = (all("$SF"), all("$AXNUC"), all("$OFFSET"));
+                if !(sf.is_empty() && axnuc.is_empty() && offset.is_empty()) {
+                    let numbers =
+                        |v: &[&str]| v.iter().filter_map(|s| parse_affn(s)).collect::<Vec<_>>();
+                    e.insert(
+                        "dimension_parameters".into(),
+                        json!({
+                            "spectrometer_frequency_mhz": numbers(&sf),
+                            "nucleus": axnuc.iter().map(|s| s.trim_matches(['<', '>'])).collect::<Vec<_>>(),
+                            "offset_ppm": numbers(&offset),
+                        }),
+                    );
+                }
             }
             let sweeps = sweep_keys.len() as u32;
             (channels, layout, n, sweeps)
@@ -1054,6 +1112,8 @@ impl Dataset for JcampDataset {
             ("traces[].extra.axis", Source::Spec),
             ("traces[].extra.axis[irregular]", Source::Inferred),
             ("traces[].extra.sweep_axis", Source::Inferred),
+            ("traces[].extra.dimensions", Source::Spec),
+            ("traces[].extra.dimension_parameters", Source::VendorImpl),
             ("traces[].extra.nucleus", Source::Spec),
             ("traces[].extra.observe_frequency_mhz", Source::Spec),
         ] {

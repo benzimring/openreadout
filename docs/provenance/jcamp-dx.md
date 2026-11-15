@@ -64,3 +64,9 @@ JCAMP-DX is an open IUPAC standard for exchanging spectra as printable ASCII. It
 ## 2026-09-26 — `##END` without `=`
 
 **Corpus files:** none new; a synthetic unit test (`end_without_equals_closes_the_block`). **Prior art:** none. **What was inferred from what.** A held-out measurement (draw C, finding C-L1) reported that `check` exits 4 on an intact file whose last line is `##END` with no `=`; the held-out file itself was not opened. JCAMP-DX labels are `##LABEL=`, but `##END` is unambiguous without the `=`, so it now closes the open block with an info finding (`end_without_equals`) instead of being skipped as a bad label (which left the block unclosed: "truncated file?").
+
+## 2026-11-14 — nD spectra: the header's dimensions and TopSpin's per-dimension parameters (Ben Zimring with Claude as assistant)
+
+**Corpus files used:** `nmrxiv-s37-hsqc-jdx`, `nmrxiv-s1-cosy-dx` (TopSpin nD exports, CC-BY-4.0), `zenodo10800686-17-hsqc` (MestReNova export, CC0). **Prior art consulted:** none (JCAMP-DX 5.01 NMR protocol, §7 NTUPLES).
+
+**What was inferred from what.** No existing value changed. For an NTUPLES spectrum whose pages are keyed by a header variable, the trace now also reports `extra.dimensions`: for the independent variable and for the page variable, their entries of `##SYMBOL=`, `##UNITS=`, `##FIRST=`, `##LAST=` and `##VAR_DIM=`, and their entry of `##.OBSERVE FREQUENCY=` or `##.NUCLEUS=` when the header gives one per column (MestReNova does). `extra.dimension_parameters` lists the block's `##$SF=`, `##$AXNUC=` and `##$OFFSET=` values in file order: TopSpin's exports repeat its processing parameters once per dimension, F2 first (both TopSpin files). `analyze nmr-cross-peaks` read the same records from the vendor tree before (docs/provenance/nmr-processing.md, 2026-11-13). The conversion to ppm and the move of an axis to its `##$OFFSET=` stay in that analysis.

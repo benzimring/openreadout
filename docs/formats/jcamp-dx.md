@@ -67,6 +67,8 @@ Each line: an abscissa (AFFN), then ordinates. Tokens (`YToken`):
 | `resolution`, `min_y`, `max_y`, `first_y` | `RESOLUTION`, `MINY`, `MAXY`, `FIRSTY` | numbers |
 | `axis` | `XUNITS`/`FIRSTX`/`LASTX`/`NPOINTS` or NTUPLES `UNITS`/`FIRST`/`LAST`/`VAR_DIM` | `{quantity, unit, first, last, step, size}`; quantity from the unit: `frequency` (HZ), `chemical_shift` (PPM), `time`, `wavenumber` (1/CM), `wavelength` (NANOMETERS, MICROMETERS), `mass_to_charge` (M/Z), else `x` |
 | `sweep_axis` | NTUPLES `PAGE=` | `{variable, unit, values}` |
+| `dimensions` | NTUPLES `SYMBOL`/`UNITS`/`FIRST`/`LAST`/`VAR_DIM`, per-column `.OBSERVE FREQUENCY`/`.NUCLEUS` | nD spectra: `[{symbol, unit, first, last, size, observe_frequency_mhz, nucleus}]`, the independent variable first, then the page variable |
+| `dimension_parameters` | `$SF`, `$AXNUC`, `$OFFSET` | nD spectra exported by TopSpin: `{spectrometer_frequency_mhz, nucleus, offset_ppm}`, each a list in file order (one entry per dimension, F2 first) |
 | `sweep_sample_counts` | – | points per page when NTUPLES pages differ in length |
 | `ntuples`, `symbols`, `variables` | `NTUPLES`, `SYMBOL`, `VAR_NAME` | |
 | `undecodable`, `problems`, `note` | – | why a table cannot be read |
